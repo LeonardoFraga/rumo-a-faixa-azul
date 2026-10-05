@@ -29,8 +29,9 @@ jobs:
       # publica só o site, sem README, LICENSE ou arquivos do repositório
       - name: Montar a pasta do site
         run: |
-          mkdir _site
-          cp index.html _site/
+          mkdir -p _site/icons
+          cp index.html manifest.webmanifest favicon.svg favicon.ico _site/
+          cp icons/*.png _site/icons/
 
       - uses: actions/upload-pages-artifact@v5
         with:
