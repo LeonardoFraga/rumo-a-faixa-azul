@@ -1,0 +1,50 @@
+name: Verificar vídeos
+
+# toda segunda às 9h (horário de Brasília), quando o guia muda na main,
+# e na mão pela aba Actions
+on:
+  schedule:
+    - cron: "0 12 * * 1"
+  push:
+    branches: [main]
+    paths:
+      - index.html
+      - scripts/verificar_videos.py
+      - .github/workflows/verificar-videos.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TITULO: "Vídeos fora do ar"
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Conferir os vídeos do guia
+        id: check
+        run: python3 scripts/verificar_videos.py relatorio.md
+
+      - name: Abrir ou atualizar a issue
+        if: steps.check.outputs.quebrados != '0'
+        run: |
+          gh label create videos --color D93F0B --description "Vídeos do guia fora do ar" --force
+          numero=$(gh issue list --state open --label videos --search "in:title \"$TITULO\"" --json number --jq '.[0].number')
+          if [ -n "$numero" ]; then
+            gh issue edit "$numero" --body-file relatorio.md
+          else
+            gh issue create --title "$TITULO" --label videos --body-file relatorio.md
+          fi
+
+      - name: Fechar a issue quando tudo voltou ao normal
+        if: steps.check.outputs.quebrados == '0'
+        run: |
+          numero=$(gh issue list --state open --label videos --search "in:title \"$TITULO\"" --json number --jq '.[0].number' 2>/dev/null || true)
+          if [ -n "$numero" ]; then
+            gh issue close "$numero" --comment "Todos os vídeos estão no ar de novo."
+          fi

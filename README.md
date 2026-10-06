@@ -44,4 +44,10 @@ O site é estático e não tem build: `index.html`, mais `manifest.webmanifest`,
 
 Os ícones saem todos de um único desenho (uma faixa azul amarrada). Para mudar o desenho, edite `icons/gerar_icones.py` e rode `python3 icons/gerar_icones.py` na raiz do repositório; o script precisa do Pillow (`pip install pillow`). A cada push na `main`, o workflow `.github/workflows/pages.yml` publica a versão nova no GitHub Pages.
 
+## Vídeos fora do ar
+
+O workflow `.github/workflows/verificar-videos.yml` confere todos os vídeos do guia toda segunda às 9h (horário de Brasília) e sempre que o `index.html` muda na `main`. Se algum vídeo for removido ou ficar privado, ele abre uma issue "Vídeos fora do ar" com a etapa, a técnica e o link para trocar. Quando todos voltam a funcionar, a issue é fechada sozinha.
+
+Para conferir na hora: aba **Actions → Verificar vídeos → Run workflow**, ou localmente com `python3 scripts/verificar_videos.py`.
+
 Os vídeos são links para o YouTube; nenhum vídeo é hospedado aqui. O conteúdo complementa a aula e não substitui o seu professor.
