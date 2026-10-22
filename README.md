@@ -50,4 +50,4 @@ O workflow `.github/workflows/verificar-videos.yml` confere todos os vídeos do 
 
 Para conferir na hora: aba **Actions → Verificar vídeos → Run workflow**, ou localmente com `python3 scripts/verificar_videos.py`.
 
-Os vídeos são links para o YouTube; nenhum vídeo é hospedado aqui. O conteúdo complementa a aula e não substitui o seu professor.
+Os vídeos tocam dentro do site pelo player do YouTube (`youtube-nocookie.com`), com um link para abrir no YouTube como alternativa; nenhum vídeo é hospedado aqui. Se o dono de um vídeo desativar a incorporação, o player mostra "Vídeo indisponível" e o link continua funcionando. O conteúdo complementa a aula e não substitui o seu professor.

@@ -82,7 +82,7 @@ h1,h2,h3,p{margin:0}
 
 /* ---------- topo do início ---------- */
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
-.brand{font:800 18px/1.2 var(--f)}
+.brand{font:800 18px/1.2 var(--f);margin:0}
 .brand b{color:var(--prog)}
 .saved{font-size:12px;color:var(--muted);text-align:right}
 
@@ -139,7 +139,13 @@ h1,h2,h3,p{margin:0}
 .sec-h h2{font:700 12px/1.3 var(--f);text-transform:uppercase;letter-spacing:.06em}
 .sec-h span{font-size:12px;color:var(--muted)}
 .videos{display:flex;flex-direction:column;gap:10px}
-.video{display:grid;grid-template-columns:112px 1fr;gap:12px;align-items:center;padding:8px;text-decoration:none;color:#fff}
+.video{display:grid;grid-template-columns:112px 1fr;gap:12px;align-items:center;padding:8px;color:#fff}
+.video.on{grid-template-columns:1fr}
+button.thumb{padding:0;border:0;cursor:pointer}
+.video .vt b{cursor:pointer}
+.vframe{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000}
+.vframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.vyt{font-weight:700;color:var(--accent);text-decoration:none;padding:6px 2px;margin:-6px -2px;white-space:nowrap}
 .thumb{position:relative;width:112px;height:63px;border-radius:12px;overflow:hidden;background:var(--g08)}
 .thumb img{display:block;width:100%;height:100%;object-fit:cover}
 .thumb .play{position:absolute;left:50%;top:50%;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;background:rgba(0,0,0,.65);display:grid;place-items:center}
@@ -147,7 +153,7 @@ h1,h2,h3,p{margin:0}
 .vt{min-width:0;display:flex;flex-direction:column;gap:4px}
 .vt b{font:700 13px/1.3 var(--f);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .vt span{font-size:12px;color:var(--muted)}
-.vdesc{font-size:13px;line-height:1.45;color:var(--muted);padding:0 8px 8px}
+.vdesc{font-size:13px;line-height:1.45;color:var(--muted);padding:0 12px 12px}
 .tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:14px;background:var(--g06);border:1px solid var(--b12)}
 .tabs button{min-height:42px;padding:0 4px;border-radius:12px;border:1px solid transparent;background:transparent;color:rgba(255,255,255,.8);font:700 13px/1.2 var(--f);cursor:pointer}
 .tabs button[aria-selected="true"]{background:var(--a32);border-color:rgba(170,200,255,.5);color:#fff}
@@ -168,6 +174,8 @@ h1,h2,h3,p{margin:0}
 .chips::-webkit-scrollbar{display:none}
 .chips .pill{flex:none;min-height:38px}
 .terms{display:flex;flex-direction:column;gap:10px}
+.culture{display:flex;flex-wrap:wrap;gap:8px}
+.culture .pill{min-height:38px;padding:0 12px}
 .term{display:flex;flex-direction:column;gap:8px}
 .term-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .term-h b{font:800 17px/1.25 var(--f)}
@@ -261,6 +269,7 @@ const METHOD = [null,
   ["encaixar no rola", "Conseguiu aplicar no treino livre, mesmo que uma vez só. Aí a técnica é sua."]];
 const BASICS = DATA.find(m => m.modulo === 1) || {};
 const GLOSS = (BASICS.glossario || []).map(g => ({ ...g, id: "g-" + slug(g.termo) }));
+const CULTURA = "Tatame e cultura";   // categoria que fica no Início, não nos filtros do glossário
 const modTitle = n => (DATA.find(m => m.modulo === n) || {}).titulo || "";
 
 const LS_KEY = "faixa-azul-progresso-v1";
@@ -335,12 +344,28 @@ function gloss(text, seen){
 }
 
 /* ---------- peças ---------- */
-function videoCard(v){
+// o vídeo toca dentro do cartão: a miniatura só vira player no toque, para não carregar vários players de uma vez
+function videoCard(v, bare){
   const id = ytId(v.url);
-  return `<a class="video card2" href="${esc(v.url)}" target="_blank" rel="noopener">
-      <span class="thumb">${id ? `<img src="https://i.ytimg.com/vi/${esc(id)}/mqdefault.jpg" alt="" loading="lazy" width="112" height="63">` : ""}<span class="play">${PLAY}</span></span>
-      <span class="vt"><b>${esc(v.titulo)}</b><span>${esc(v.canal || "YouTube")} · ${v.idioma === "PT" ? "Português" : "Inglês"} ↗</span></span>
-    </a>`;
+  const meta = `${esc(v.canal || "YouTube")} · ${v.idioma === "PT" ? "Português" : "Inglês"} · <a class="vyt" href="${esc(v.url)}" target="_blank" rel="noopener" aria-label="Abrir no YouTube: ${esc(v.titulo)}">YouTube ↗</a>`;
+  return `<div class="video${bare ? "" : " card2"}">
+      ${id ? `<button type="button" class="thumb" data-play="${esc(id)}" aria-label="Assistir aqui: ${esc(v.titulo)}"><img src="https://i.ytimg.com/vi/${esc(id)}/mqdefault.jpg" alt="" loading="lazy" width="112" height="63"><span class="play">${PLAY}</span></button>` : ""}
+      <span class="vt"><b>${esc(v.titulo)}</b><span>${meta}</span></span>
+    </div>`;
+}
+let playing = null;   // { btn, frame }: a miniatura que virou player, para poder voltar
+function play(btn){
+  stopVideo();
+  const id = btn.dataset.play, card = btn.closest(".video");
+  const frame = document.createElement("div"); frame.className = "vframe";
+  frame.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&playsinline=1&rel=0"
+    title="${esc(card.querySelector(".vt b").textContent)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+  btn.replaceWith(frame); card.classList.add("on");
+  playing = { btn, frame };
+}
+function stopVideo(){
+  if (playing && playing.frame.isConnected) { playing.frame.parentNode.classList.remove("on"); playing.frame.replaceWith(playing.btn); }
+  playing = null;
 }
 function stepper(t){
   const l = lv(t);
@@ -381,7 +406,7 @@ function viewInicio(){
   const cont = t ? `
     <section class="card" aria-labelledby="hCont">
       <span class="kicker">${pts === 0 ? "Comece por aqui" : "Continue de onde parou"}</span>
-      <h1 class="tname" id="hCont">${esc(t.nome)}</h1>
+      <h2 class="tname" id="hCont">${esc(t.nome)}</h2>
       <p class="meta">Etapa ${t.modulo} de ${NMOD} · ${esc(modTitle(t.modulo))}</p>
       ${stepper(t)}
       ${nowLine(t)}
@@ -389,18 +414,19 @@ function viewInicio(){
     </section>` : `
     <section class="card" aria-labelledby="hCont">
       <span class="kicker">Trilha completa</span>
-      <h1 class="tname" id="hCont">Você encaixou as ${TECHS.length} técnicas</h1>
+      <h2 class="tname" id="hCont">Você encaixou as ${TECHS.length} técnicas</h2>
       <p class="now">Hora de pedir ao professor para avaliar a sua faixa azul. Siga revisando na trilha.</p>
       <a class="btn-primary" href="#trilha">Ver trilha →</a>
     </section>`;
   const cur = t ? t.modulo : 0;
   return `
   <header class="top">
-    <span class="brand">Rumo à <b>azul</b></span>
+    <h1 class="brand">Rumo à <b>azul</b></h1>
     <span class="saved" id="syncLbl">${ui.sync ? "Salvo na sua conta" : "Salvo neste aparelho"}</span>
   </header>
-  ${cont}
   ${belt()}
+  ${cont}
+  ${cultura()}
   <section class="card2 pad18 stack" aria-labelledby="hTrilhaMini">
     <div class="row"><h2 class="h13" id="hTrilhaMini">Trilha · ${NMOD} etapas</h2><a class="link" href="#trilha" style="min-height:0">Ver trilha →</a></div>
     <div class="minitrail">${DATA.map(m => { const s = modStats(m.modulo); return `
@@ -410,9 +436,19 @@ function viewInicio(){
   </section>
   <footer class="foot">
     <p>${SAFETY}</p>
-    <p>Vídeos verificados em outubro de 2026. Links abrem no YouTube.</p>
+    <p>Vídeos verificados em outubro de 2026. Eles tocam aqui mesmo, pelo player do YouTube.</p>
     <span id="resetBox">${resetHTML(false)}</span>
   </footer>`;
+}
+function cultura(){
+  const termos = GLOSS.map((g,i) => [g,i]).filter(([g]) => g.categoria === CULTURA);
+  if (!termos.length) return "";
+  return `
+  <section class="card2 pad18 stack" aria-labelledby="hCultura">
+    <div><h2 class="h13" id="hCultura">${CULTURA}</h2><p class="meta" style="margin-top:4px">Palavras que você vai ouvir no treino. Toque para ver o que significam.</p></div>
+    <div class="culture">${termos.map(([g,i]) => `<button type="button" class="pill" data-g="${i}" data-k="cu${i}">${esc(g.termo)}</button>`).join("")}</div>
+    ${BASICS.etiqueta && BASICS.etiqueta.length ? `<a class="link" href="#guia/etiqueta" style="min-height:32px">Etiqueta do tatame →</a>` : ""}
+  </section>`;
 }
 function resetHTML(confirm){
   return confirm
@@ -508,9 +544,9 @@ function viewTecnica(){
     <button type="button" class="link" id="lerMais" data-k="lm" hidden>${ui.lerMais ? "ler menos" : "ler mais"}</button>
   </div>
   ${(t.videos||[]).length ? `
-  <section class="stack" aria-labelledby="hAssista">
-    <div class="sec-h"><h2 id="hAssista">1 · Assista</h2><span>Abre no YouTube ↗</span></div>
-    <div class="videos">${t.videos.map(videoCard).join("")}</div>
+  <section class="stack" aria-labelledby="hAssista" data-keep="v-${t.id}">
+    <div class="sec-h"><h2 id="hAssista">1 · Assista</h2><span>Toque para assistir aqui</span></div>
+    <div class="videos">${t.videos.map(v => videoCard(v)).join("")}</div>
   </section>` : ""}
   <section class="card" aria-labelledby="hNivel">
     <div class="sec-h"><h2 id="hNivel">${(t.videos||[]).length ? "2" : "1"} · Marque seu nível</h2></div>
@@ -527,7 +563,7 @@ function viewTecnica(){
 }
 
 function viewGlossario(){
-  const cats = [...new Set(GLOSS.map(g => g.categoria).filter(Boolean))];
+  const cats = [...new Set(GLOSS.map(g => g.categoria).filter(c => c && c !== CULTURA))];
   return `
   <header>
     <h1 class="title">Glossário</h1>
@@ -570,8 +606,8 @@ function viewPlacar(){
 // textos de apoio da etapa 1: vídeos de introdução, mapa das posições e etiqueta
 const GUIAS = {
   comece: ["Comece por aqui", "Vídeos curtos que explicam o que é cada posição e como uma luta de jiu-jitsu se desenrola. Assista antes de tudo.", m => `
-    <div class="sec-h"><h2>Vídeos</h2><span>Abre no YouTube ↗</span></div>
-    <div class="videos">${m.videos_gerais.map(v => `<div class="card2">${videoCard(v).replace(' card2"', '"')}${v.descricao ? `<p class="vdesc">${esc(v.descricao)}</p>` : ""}</div>`).join("")}</div>`],
+    <div class="sec-h"><h2>Vídeos</h2><span>Toque para assistir aqui</span></div>
+    <div class="videos">${m.videos_gerais.map(v => `<div class="card2">${videoCard(v, true)}${v.descricao ? `<p class="vdesc">${esc(v.descricao)}</p>` : ""}</div>`).join("")}</div>`],
   mapa: ["Mapa das posições", "A ordem em que uma luta costuma andar, do começo em pé até a posição mais dominante. Os números são os pontos de competição para quem chega na posição por cima.", m => `
     <div class="terms">${m.posicoes.map((p,i) => `
       <article class="pos card2 pad16 stack">
@@ -579,7 +615,7 @@ const GUIAS = {
         ${p.nome_en ? `<p class="en" style="margin-top:-8px">${esc(p.nome_en)}</p>` : ""}
         <p class="note">${esc(p.descricao)}</p>
         ${p.por_cima || p.por_baixo ? `<dl>${p.por_cima ? `<dt>Por cima</dt><dd>${esc(p.por_cima)}</dd>` : ""}${p.por_baixo ? `<dt>Por baixo</dt><dd>${esc(p.por_baixo)}</dd>` : ""}</dl>` : ""}
-        ${p.video ? videoCard(p.video).replace(' card2"', '"') : ""}
+        ${p.video ? videoCard(p.video, true) : ""}
         ${p.modulos && p.modulos.length ? `<div class="elinks">${etapaLinks(p.modulos)}</div>` : ""}
       </article>`).join("")}</div>`],
   etiqueta: ["Etiqueta do tatame", "Regras de convivência que ninguém escreve na parede, mas todo mundo espera que você saiba.", m => `
@@ -630,10 +666,22 @@ function setTech(id){
 }
 
 /* ---------- render ---------- */
+// troca o conteúdo da tela, mas deixa no lugar o bloco marcado com data-keep (os vídeos):
+// tirar um iframe do DOM recarrega o player, e marcar o nível não pode parar o vídeo
+function patch(app, html){
+  const tpl = document.createElement("template"); tpl.innerHTML = html;
+  const fresh = [...tpl.content.children].find(el => el.dataset.keep);
+  const kept = fresh && [...app.children].find(el => el.dataset.keep === fresh.dataset.keep);
+  if (!kept) { stopVideo(); app.replaceChildren(tpl.content); return; }
+  [...app.childNodes].forEach(n => { if (n !== kept) n.remove(); });
+  const nodes = [...tpl.content.childNodes], i = nodes.indexOf(fresh);
+  kept.before(...nodes.slice(0, i));
+  kept.after(...nodes.slice(i + 1));
+}
 function render(){
   const app = $("#app");
   const k = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.k : null;
-  app.innerHTML = VIEWS[ui.view]();
+  patch(app, VIEWS[ui.view]());
   const nav = NAV_OF[ui.view] || ui.view;
   document.querySelectorAll("[data-nav]").forEach(a => a.dataset.nav === nav ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
   if (ui.view === "glossario") renderGloss();
@@ -746,7 +794,7 @@ function setLevel(id, l){
 
 /* ---------- eventos ---------- */
 document.addEventListener("click", e => {
-  const gl = e.target.closest(".gl");
+  const gl = e.target.closest("[data-g]");
   if (gl) { e.preventDefault(); openSheet(gl); return; }
   if (e.target.closest("[data-close]")) { closeSheet(); return; }
   const veja = e.target.closest("[data-veja]");
@@ -756,6 +804,8 @@ document.addEventListener("click", e => {
     if (location.hash === "#glossario") route(); else location.hash = "#glossario";
     return;
   }
+  const pv = e.target.closest("[data-play]") || (e.target.closest(".video .vt b") && e.target.closest(".video").querySelector("[data-play]"));
+  if (pv) { play(pv); return; }
   const b = e.target.closest("[data-lv]");
   if (b) { setLevel(b.dataset.id, +b.dataset.lv); return; }
   const st = e.target.closest("[data-stage]");
